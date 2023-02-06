@@ -7,6 +7,7 @@ Automatically create ACME CNAME records for verifying domains in Fastly TLS subs
 import logging
 
 import fastly
+from fastly.api.tls_subscriptions_api import TlsSubscriptionsApi
 from octodns.record import Record
 from octodns.source.base import BaseSource
 from octodns.zone import Zone
@@ -53,7 +54,7 @@ class FastlyAcmeSource(BaseSource):
     def challenges(self, zone: Zone):
         if self._challenges is None:
             with fastly.ApiClient(self._config) as client:
-                instance = fastly.api.tls_subscriptions_api.TlsSubscriptionsApi(client)
+                instance = TlsSubscriptionsApi(client)
                 subscriptions = instance.list_tls_subs(
                     include="tls_authorizations", filter_tls_domains_id=zone.name.removesuffix(".")
                 )

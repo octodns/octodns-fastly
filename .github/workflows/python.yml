@@ -25,7 +25,7 @@ jobs:
       - name: Install Pipenv
         run: pipx install pipenv
       - name: Install dependencies
-        run: pipenv install --dev
+        run: pipenv install --dev -e .
       - name: Lint with flake8
         run: pipenv run flake8 . --color always --show-source --statistics
       - name: Test with pytest

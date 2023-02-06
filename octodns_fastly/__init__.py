@@ -3,10 +3,10 @@
 #
 
 import logging
-import fastly
 
-from octodns.source.base import BaseSource
+import fastly
 from octodns.record import Record
+from octodns.source.base import BaseSource
 
 
 class FastlyAcmeSource(BaseSource):

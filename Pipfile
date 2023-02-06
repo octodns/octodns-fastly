@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+octodns-fastly = {editable = true, path = "."}
+
+[dev-packages]
+pytest = "==7.2.1"
+black = "==23.1.0"
+pylint = "==2.16.0"
+
+[requires]
+python_version = "3.11"

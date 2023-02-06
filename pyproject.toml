@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools~=67.1", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "octodns-fastly"
+requires-python = "~=3.10"
+dependencies = [
+    "octodns~=0.9.15",
+    "fastly~=1.1.0",
+]
+dynamic = ["version"]

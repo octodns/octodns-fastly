@@ -1,26 +1,22 @@
 # Fastly source for OctoDNS
 
-An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) source for [Fastly](https://www.fastly.com).
+An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) for [Fastly](https://www.fastly.com).
 
-Supports:
+**Sources**
 
-* [ACME DNS challenges](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership) with `FastlyAcmeSource`
+`FastlyAcmeSource` will create [ACME DNS challenge](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership) CNAME records such as `_acme-challange.www.example.com` based on TLS subscriptions.
 
-    ```yml
-    fastly:
-      class: octodns_fastly.FastlyAcmeSource
-      token: env/FASTLY_API_TOKEN
+OctoDNS configuration:
 
-    zones:
-      example.com.:
-        sources:
-          - fastly
-        targets:
-          - route53
-    ```
+```yml
+fastly:
+  class: octodns_fastly.FastlyAcmeSource
+  token: env/FASTLY_API_TOKEN
 
-Related links:
-
-* https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#using-the-acme-dns-challenge-to-verify-domain-ownership
-* https://developer.fastly.com/reference/api/tls/subs/#list-tls-subs
-* https://letsencrypt.org/docs/challenge-types/#dns-01-challenge
+zones:
+  example.com.:
+    sources:
+      - fastly
+    targets:
+      - route53
+```

@@ -230,6 +230,52 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")
+    def test_populate_dedups_wildcard_and_root_domain_challenges(self, mock_requests):
+        zone = Zone("example.com.", [])
+        source = FastlyAcmeSource("test_id", "test_token")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            },
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            },
+                        ]
+                    },
+                }
+            ],
+            "meta": {"total_pages": 1},
+        }
+        mock_requests.get.return_value = mock_response
+
+        source.populate(zone)
+
+        records = {(r.name, r._type): r for r in zone.records}
+
+        assert len(zone.records) == 1
+
+        record = records[("_acme-challenge", "CNAME")]
+        assert "_acme-challenge" == record.name
+        assert "CNAME" == record._type
+        assert "1234567890abcdef.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+    @patch("octodns_fastly.requests")
     def test_populate_errors_on_too_many_subscriptions(self, mock_requests):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")

@@ -4,23 +4,20 @@ An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) source f
 
 Supports:
 
-* [ACME domain verification records](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership) in `FastlyAcmeSource`
+* [ACME DNS challenges](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership) with `FastlyAcmeSource`
 
+    ```yml
+    fastly:
+      class: octodns_fastly.FastlyAcmeSource
+      token: env/FASTLY_API_TOKEN
 
-Example OctoDNS configuration:
-
-```yml
-fastly:
-  class: octodns_fastly.FastlyAcmeSource
-  token: env/FASTLY_API_TOKEN
-
-zones:
-  example.com.:
-    sources:
-      - fastly
-    targets:
-      - route53
-```
+    zones:
+      example.com.:
+        sources:
+          - fastly
+        targets:
+          - route53
+    ```
 
 Related links:
 

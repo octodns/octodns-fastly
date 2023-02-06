@@ -6,8 +6,7 @@ Automatically create ACME CNAME records for verifying domains in Fastly TLS subs
 
 import logging
 
-import fastly
-from fastly.api.tls_subscriptions_api import TlsSubscriptionsApi
+import requests
 from octodns.record import Record
 from octodns.source.base import BaseSource
 from octodns.zone import Zone
@@ -46,42 +45,42 @@ class FastlyAcmeSource(BaseSource):
         super().__init__(id)
 
         self.ttl = ttl
-        self._config = fastly.Configuration()
-        self._config.api_token = token
+        self._token = token
 
         self._challenges = None
 
     def challenges(self, zone: Zone):
         if self._challenges is None:
-            with fastly.ApiClient(self._config) as client:
-                instance = TlsSubscriptionsApi(client)
-                subscriptions = instance.list_tls_subs(
-                    include="tls_authorizations", filter_tls_domains_id=zone.name.removesuffix(".")
-                )
+            domain = zone.name.removesuffix(".")
 
-                if subscriptions["meta"]["total_pages"] > 1:
-                    raise NotImplementedError("More than one page of TLS subscriptions is not supported")
+            resp = requests.get(
+                "https://api.fastly.com/tls/subscriptions?include=tls_authorizations&filter[tls_domains.id]=%s" % domain,
+                headers={"Fastly-Key": self._token},
+            )
 
-                # Ensure we only have a list of authorizations
-                authorizations = [
-                    authorization
-                    for authorization in subscriptions["included"]
-                    if authorization["type"] == "tls_authorization"
-                ]
+            subscriptions = resp.json()
 
-                challenges = []
+            if subscriptions["meta"]["total_pages"] > 1:
+                raise NotImplementedError("More than one page of TLS subscriptions is not supported")
 
-                for authorization in authorizations:
-                    for challenge in authorization["attributes"]["challenges"]:
-                        if challenge["type"] == "managed-dns":
-                            challenges.append(
-                                {
-                                    "name": challenge["record_name"].removesuffix(".example.com"),
-                                    "value": "%s." % challenge["values"][0],
-                                }
-                            )
+            # Ensure we only have a list of authorizations
+            authorizations = [
+                authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
+            ]
 
-                self._challenges = challenges
+            challenges = []
+
+            for authorization in authorizations:
+                for challenge in authorization["attributes"]["challenges"]:
+                    if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
+                        challenges.append(
+                            {
+                                "name": challenge["record_name"].removesuffix("." + domain),
+                                "value": "%s." % challenge["values"][0],
+                            }
+                        )
+
+            self._challenges = challenges
 
         return self._challenges
 

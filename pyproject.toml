@@ -10,7 +10,7 @@ name = "octodns-fastly"
 requires-python = "~=3.10"
 dependencies = [
   "octodns~=0.9.15",
-  "fastly~=1.1.0",
+  "requests~=2.28",
 ]
 dynamic = ["version"]
 

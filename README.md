@@ -1,6 +1,13 @@
-# Fastly soure for octoDNS
+# Fastly source for OctoDNS
 
-An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) for [Fastly's ACME domain verification records](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership).
+An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) source for [Fastly](https://www.fastly.com).
+
+Supports:
+
+* [ACME domain verification records](https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#verifying-domain-ownership) in `FastlyAcmeSource`
+
+
+Example OctoDNS configuration:
 
 ```yml
 fastly:
@@ -14,6 +21,8 @@ zones:
     targets:
       - route53
 ```
+
+Related links:
 
 * https://docs.fastly.com/en/guides/serving-https-traffic-using-fastly-managed-certificates#using-the-acme-dns-challenge-to-verify-domain-ownership
 * https://developer.fastly.com/reference/api/tls/subs/#list-tls-subs

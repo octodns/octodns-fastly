@@ -9,7 +9,7 @@ import logging
 import requests
 from octodns.record import Record
 from octodns.source.base import BaseSource
-from octodns.zone import Zone
+from octodns.zone import SubzoneRecordException, Zone
 
 
 class FastlyAcmeSource(BaseSource):
@@ -111,6 +111,13 @@ class FastlyAcmeSource(BaseSource):
                     "value": challange["value"],
                 },
             )
-            zone.add_record(record)
+
+            try:
+                zone.add_record(record)
+            except SubzoneRecordException:
+                self.log.debug(
+                    "populate: skipping subzone record=%s",
+                    record,
+                )
 
         self.log.info("populate:   found %s records", len(zone.records) - before)

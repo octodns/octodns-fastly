@@ -48,45 +48,59 @@ class FastlyAcmeSource(BaseSource):
         self._ttl = default_ttl
         self._token = token
 
+    def _list_tls_subscriptions(self):
+        url = "https://api.fastly.com/tls/subscriptions?include=tls_authorizations"
+
+        while True:
+            resp = requests.get(
+                url,
+                headers={"Fastly-Key": self._token},
+            )
+            resp.raise_for_status()  # Error on non-200 responses
+
+            subscriptions = resp.json()
+            yield subscriptions
+
+            self.log.debug(
+                "_list_tls_subscriptions: recieved tls subscription page %d of %d",
+                subscriptions["meta"]["current_page"],
+                subscriptions["meta"]["total_pages"],
+            )
+
+            if subscriptions["meta"]["current_page"] == subscriptions["meta"]["total_pages"]:
+                break
+
+            url = "%s&page[number]=%d" % (url, subscriptions["meta"]["current_page"] + 1)
+
     def _challenges(self, zone: Zone):
         domain = zone.name.removesuffix(".")
-
-        resp = requests.get(
-            "https://api.fastly.com/tls/subscriptions?include=tls_authorizations",
-            headers={"Fastly-Key": self._token},
-        )
-        resp.raise_for_status()  # Error on non-200 responses
-
-        subscriptions = resp.json()
-
-        if subscriptions["meta"]["total_pages"] > 1:
-            raise NotImplementedError("More than one page of TLS subscriptions is not supported")
-
-        # Ensure we only have a list of authorizations
-        authorizations = [
-            authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
-        ]
-
-        self.log.debug("_challenges: recieved %d authorizations", len(authorizations))
 
         # Use a set to deduplicate identical challenges
         challenges = set()
 
-        for authorization in authorizations:
-            self.log.debug(
-                "_challenges: recieved %d challenges for authorization %s",
-                len(authorization["attributes"]["challenges"]),
-                authorization["id"],
-            )
+        for subscriptions in self._list_tls_subscriptions():
+            # Ensure we only have a list of authorizations
+            authorizations = [
+                authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
+            ]
 
-            for challenge in authorization["attributes"]["challenges"]:
-                if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
-                    challenges.add(
-                        (
-                            challenge["record_name"].removesuffix("." + domain),
-                            "%s." % challenge["values"][0],
+            self.log.debug("_challenges: recieved %d authorizations", len(authorizations))
+
+            for authorization in authorizations:
+                self.log.debug(
+                    "_challenges: recieved %d challenges for authorization %s",
+                    len(authorization["attributes"]["challenges"]),
+                    authorization["id"],
+                )
+
+                for challenge in authorization["attributes"]["challenges"]:
+                    if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
+                        challenges.add(
+                            (
+                                challenge["record_name"].removesuffix("." + domain),
+                                "%s." % challenge["values"][0],
+                            )
                         )
-                    )
 
         self.log.debug("_challenges: filtered to %d challenges", len(challenges))
 

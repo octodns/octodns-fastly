@@ -426,6 +426,71 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")
+    def test_populate_api_pagination_with_wildcard_and_root(self, mock_requests):
+        zone = Zone("example.com.", [])
+        source = FastlyAcmeSource("test_id", "test_token")
+
+        mock_page_one_response = MagicMock()
+        mock_page_one_response.status_code = 200
+        mock_page_one_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "1234567890abcdefghijkl",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 1, "total_pages": 2},
+        }
+
+        mock_page_two_response = MagicMock()
+        mock_page_two_response.status_code = 200
+        mock_page_two_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "lkjihgfedcba0987654321",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 2, "total_pages": 2},
+        }
+        source._session = mock_requests
+        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response]
+
+        source.populate(zone)
+
+        records = {(r.name, r._type): r for r in zone.records}
+
+        assert len(zone.records) == 1
+
+        record = records[("_acme-challenge", "CNAME")]
+        assert "_acme-challenge" == record.name
+        assert "CNAME" == record._type
+        assert "1234567890abcdef.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+    @patch("octodns_fastly.requests")
     def test_populate_errors_with_invalid_api_key(self, mock_requests):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")

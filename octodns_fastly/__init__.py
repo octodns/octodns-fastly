@@ -63,7 +63,7 @@ class FastlyAcmeSource(BaseSource):
             yield subscriptions
 
             self.log.debug(
-                "_list_tls_subscriptions: recieved tls subscription page %d of %d",
+                "_list_tls_subscriptions: received tls subscription page %d of %d",
                 subscriptions["meta"]["current_page"],
                 subscriptions["meta"]["total_pages"],
             )
@@ -85,11 +85,11 @@ class FastlyAcmeSource(BaseSource):
                 authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
             ]
 
-            self.log.debug("_challenges: recieved %d authorizations", len(authorizations))
+            self.log.debug("_challenges: received %d authorizations", len(authorizations))
 
             for authorization in authorizations:
                 self.log.debug(
-                    "_challenges: recieved %d challenges for authorization %s",
+                    "_challenges: received %d challenges for authorization %s",
                     len(authorization["attributes"]["challenges"]),
                     authorization["id"],
                 )

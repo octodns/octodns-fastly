@@ -1,4 +1,4 @@
-# Fastly source for OctoDNS
+# OctoDNS Fastly
 
 An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) for [Fastly](https://www.fastly.com).
 

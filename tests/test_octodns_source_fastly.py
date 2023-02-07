@@ -1,7 +1,6 @@
 from unittest import TestCase, skip
 from unittest.mock import MagicMock, patch
 
-from fastly.api.tls_subscriptions_api import TlsSubscriptionsApi
 from octodns.zone import Zone
 
 from octodns_fastly import FastlyAcmeSource

@@ -55,6 +55,7 @@ class FastlyAcmeSource(BaseSource):
             "https://api.fastly.com/tls/subscriptions?include=tls_authorizations",
             headers={"Fastly-Key": self._token},
         )
+        resp.raise_for_status()  # Error on non-200 responses
 
         subscriptions = resp.json()
 

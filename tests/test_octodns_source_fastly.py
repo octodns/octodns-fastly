@@ -2,6 +2,7 @@ from unittest import TestCase, skip
 from unittest.mock import MagicMock, patch
 
 from octodns.zone import Zone
+from requests.exceptions import HTTPError
 
 from octodns_fastly import FastlyAcmeSource
 
@@ -359,3 +360,18 @@ class FastlyAcmeSourceTestCase(TestCase):
             source.populate(zone)
 
         assert "More than one page of TLS subscriptions is not supported" in str(context.exception)
+
+    @patch("octodns_fastly.requests")
+    def test_populate_errors_with_invalid_api_key(self, mock_requests):
+        zone = Zone("example.com.", [])
+        source = FastlyAcmeSource("test_id", "test_token")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.json.return_value = {"msg": "Provided credentials are missing or invalid"}
+        mock_requests.get.return_value = mock_response
+
+        mock_response.raise_for_status.side_effect = HTTPError()
+
+        with self.assertRaises(HTTPError):
+            source.populate(zone)

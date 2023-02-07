@@ -45,14 +45,14 @@ class FastlyAcmeSource(BaseSource):
 
         super().__init__(id)
 
-        self.ttl = default_ttl
+        self._ttl = default_ttl
         self._token = token
 
     def _challenges(self, zone: Zone):
         domain = zone.name.removesuffix(".")
 
         resp = requests.get(
-            "https://api.fastly.com/tls/subscriptions?include=tls_authorizations&filter[tls_domains.id]=%s" % domain,
+            "https://api.fastly.com/tls/subscriptions?include=tls_authorizations",
             headers={"Fastly-Key": self._token},
         )
 
@@ -107,7 +107,7 @@ class FastlyAcmeSource(BaseSource):
                 challange["name"],
                 {
                     "type": "CNAME",
-                    "ttl": self.ttl,
+                    "ttl": self._ttl,
                     "value": challange["value"],
                 },
             )

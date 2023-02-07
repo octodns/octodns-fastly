@@ -1,5 +1,5 @@
 from unittest import TestCase, skip
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from octodns.zone import Zone
 from requests.exceptions import HTTPError
@@ -379,7 +379,7 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"current_page": 1, "total_pages": 2},
+            "meta": {"current_page": 1, "total_pages": 3},
         }
 
         mock_page_two_response = MagicMock()
@@ -402,16 +402,60 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"current_page": 2, "total_pages": 2},
+            "meta": {"current_page": 2, "total_pages": 3},
         }
+
+        mock_page_three_response = MagicMock()
+        mock_page_three_response.status_code = 200
+        mock_page_three_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "lkjihgfedcba1234567890",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.internal.example.com",
+                                "values": ["aaaaaaaaaaaaaaaa.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 3, "total_pages": 3},
+        }
+
         source._session = mock_requests
-        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response]
+        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response, mock_page_three_response]
 
         source.populate(zone)
 
         records = {(r.name, r._type): r for r in zone.records}
 
-        assert len(zone.records) == 2
+        assert len(zone.records) == 3
+
+        mock_requests.get.assert_has_calls(
+            [
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 1},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 2},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 3},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+            ]
+        )
 
         record = records[("_acme-challenge", "CNAME")]
         assert "_acme-challenge" == record.name
@@ -423,6 +467,12 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert "_acme-challenge.www" == record.name
         assert "CNAME" == record._type
         assert "fedcba0987654321.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+        record = records[("_acme-challenge.internal", "CNAME")]
+        assert "_acme-challenge.internal" == record.name
+        assert "CNAME" == record._type
+        assert "aaaaaaaaaaaaaaaa.fastly-validations.com." == record.value
         assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")

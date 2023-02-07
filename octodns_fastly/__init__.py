@@ -50,11 +50,11 @@ class FastlyAcmeSource(BaseSource):
         self._session = requests.Session()
 
     def _list_tls_subscriptions(self):
-        url = "https://api.fastly.com/tls/subscriptions?include=tls_authorizations"
-
+        page = 1
         while True:
             resp = self._session.get(
-                url,
+                "https://api.fastly.com/tls/subscriptions",
+                params={"include": "tls_authorizations", "page[number]": page},
                 headers={"Fastly-Key": self._token},
             )
             resp.raise_for_status()  # Error on non-200 responses
@@ -71,7 +71,7 @@ class FastlyAcmeSource(BaseSource):
             if subscriptions["meta"]["current_page"] == subscriptions["meta"]["total_pages"]:
                 break
 
-            url = "%s&page[number]=%d" % (url, subscriptions["meta"]["current_page"] + 1)
+            page = subscriptions["meta"]["current_page"] + 1
 
     def _challenges(self, zone: Zone):
         domain = zone.name.removesuffix(".")

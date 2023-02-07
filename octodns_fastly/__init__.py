@@ -20,6 +20,7 @@ class FastlyAcmeSource(BaseSource):
     fastly:
       class: octodns_fastly.FastlyAcmeSource
       token: env/FASTLY_API_TOKEN
+      default_ttl: 86400
 
     zones:
       example.com.:
@@ -37,52 +38,58 @@ class FastlyAcmeSource(BaseSource):
 
     DEFAULT_TTL = 3600
 
-    def __init__(self, id: str, token: str, ttl: int = DEFAULT_TTL):
+    def __init__(self, id: str, token: str, default_ttl: int = DEFAULT_TTL):
         klass = self.__class__.__name__
         self.log = logging.getLogger(f"{klass}[{id}]")
-        self.log.debug("__init__: id=%s, ttl=%d", id, ttl)
+        self.log.debug("__init__: id=%s, default_ttl=%d", id, default_ttl)
 
         super().__init__(id)
 
-        self.ttl = ttl
+        self.ttl = default_ttl
         self._token = token
 
-        self._challenges = None
+    def _challenges(self, zone: Zone):
+        domain = zone.name.removesuffix(".")
 
-    def challenges(self, zone: Zone):
-        if self._challenges is None:
-            domain = zone.name.removesuffix(".")
+        resp = requests.get(
+            "https://api.fastly.com/tls/subscriptions?include=tls_authorizations&filter[tls_domains.id]=%s" % domain,
+            headers={"Fastly-Key": self._token},
+        )
 
-            resp = requests.get(
-                "https://api.fastly.com/tls/subscriptions?include=tls_authorizations&filter[tls_domains.id]=%s" % domain,
-                headers={"Fastly-Key": self._token},
+        subscriptions = resp.json()
+
+        if subscriptions["meta"]["total_pages"] > 1:
+            raise NotImplementedError("More than one page of TLS subscriptions is not supported")
+
+        # Ensure we only have a list of authorizations
+        authorizations = [
+            authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
+        ]
+
+        self.log.debug("_challenges: recieved %d authorizations", len(authorizations))
+
+        # Use a set to deduplicate identical challenges
+        challenges = set()
+
+        for authorization in authorizations:
+            self.log.debug(
+                "_challenges: recieved %d challenges for authorization %s",
+                len(authorization["attributes"]["challenges"]),
+                authorization["id"],
             )
 
-            subscriptions = resp.json()
-
-            if subscriptions["meta"]["total_pages"] > 1:
-                raise NotImplementedError("More than one page of TLS subscriptions is not supported")
-
-            # Ensure we only have a list of authorizations
-            authorizations = [
-                authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
-            ]
-
-            challenges = []
-
-            for authorization in authorizations:
-                for challenge in authorization["attributes"]["challenges"]:
-                    if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
-                        challenges.append(
-                            {
-                                "name": challenge["record_name"].removesuffix("." + domain),
-                                "value": "%s." % challenge["values"][0],
-                            }
+            for challenge in authorization["attributes"]["challenges"]:
+                if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
+                    challenges.add(
+                        (
+                            challenge["record_name"].removesuffix("." + domain),
+                            "%s." % challenge["values"][0],
                         )
+                    )
 
-            self._challenges = challenges
+        self.log.debug("_challenges: filtered to %d challenges", len(challenges))
 
-        return self._challenges
+        return [{"name": name, "value": value} for name, value in challenges]
 
     def populate(self, zone: Zone, target=False, lenient=False):
         self.log.debug(
@@ -94,7 +101,7 @@ class FastlyAcmeSource(BaseSource):
 
         before = len(zone.records)
 
-        for challange in self.challenges(zone):
+        for challange in self._challenges(zone):
             record = Record.new(
                 zone,
                 challange["name"],

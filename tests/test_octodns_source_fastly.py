@@ -17,7 +17,7 @@ class FastlyAcmeSourceTestCase(TestCase):
     @patch("octodns_fastly.requests")
     def test_custom_default_ttl(self, mock_requests):
         zone = Zone("example.net.", [])
-        source = FastlyAcmeSource("test_id", "test_token", ttl=60)
+        source = FastlyAcmeSource("test_id", "test_token", default_ttl=60)
 
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -25,6 +25,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "data": [],
             "included": [
                 {
+                    "id": "1234567890abcdefghijkl",
                     "type": "tls_authorization",
                     "attributes": {
                         "challenges": [
@@ -55,7 +56,7 @@ class FastlyAcmeSourceTestCase(TestCase):
     @patch("octodns_fastly.requests")
     def test_challanges_filters_by_zone(self, mock_requests):
         zone = Zone("example.net.", [])
-        source = FastlyAcmeSource("test_id", "test_token", ttl=60)
+        source = FastlyAcmeSource("test_id", "test_token")
 
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -77,7 +78,7 @@ class FastlyAcmeSourceTestCase(TestCase):
     @patch("octodns_fastly.requests")
     def test_populate_with_no_tls_subscriptions(self, mock_requests):
         zone = Zone("example.com.", [])
-        source = FastlyAcmeSource("test_id", "test_token", ttl=60)
+        source = FastlyAcmeSource("test_id", "test_token")
 
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -103,6 +104,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "data": [],
             "included": [
                 {
+                    "id": "1234567890abcdefghijkl",
                     "type": "tls_authorization",
                     "attributes": {
                         "challenges": [
@@ -142,6 +144,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "data": [],
             "included": [
                 {
+                    "id": "1234567890abcdefghijkl",
                     "type": "tls_authorization",
                     "attributes": {
                         "challenges": [
@@ -183,6 +186,8 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert "fedcba0987654321.fastly-validations.com." == record.value
         assert 3600 == record.ttl
 
+    # TLS subscriptions can contain a mix of domains, so we need to filter out any
+    # that don't match the zone we're populating.
     @patch("octodns_fastly.requests")
     def test_populate_with_mixed_domains_in_tls_subscription(self, mock_requests):
         zone = Zone("example.com.", [])
@@ -194,6 +199,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "data": [],
             "included": [
                 {
+                    "id": "1234567890abcdefghijkl",
                     "type": "tls_authorization",
                     "attributes": {
                         "challenges": [
@@ -229,6 +235,8 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert "1234567890abcdef.fastly-validations.com." == record.value
         assert 3600 == record.ttl
 
+    # When a TLS subscription contains a wildcard and root domain (e.g. example.com and *.example.com)
+    # the challenge record is listed twice in the API response with the same record_name and values.
     @patch("octodns_fastly.requests")
     def test_populate_dedups_wildcard_and_root_domain_challenges(self, mock_requests):
         zone = Zone("example.com.", [])
@@ -240,6 +248,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "data": [],
             "included": [
                 {
+                    "id": "1234567890abcdefghijkl",
                     "type": "tls_authorization",
                     "attributes": {
                         "challenges": [
@@ -275,6 +284,7 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert "1234567890abcdef.fastly-validations.com." == record.value
         assert 3600 == record.ttl
 
+    # The TLS subscription list API endpoint is paginated. We only support a single page of results.
     @patch("octodns_fastly.requests")
     def test_populate_errors_on_too_many_subscriptions(self, mock_requests):
         zone = Zone("example.com.", [])

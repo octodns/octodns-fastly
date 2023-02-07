@@ -20,3 +20,11 @@ zones:
     targets:
       - route53
 ```
+
+## Install
+
+**Pipenv**
+
+```console
+$ pipenv install -e git+https://github.com/Financial-Times/octodns-fastly.git@main#egg=octodns-fastly
+```

@@ -47,12 +47,13 @@ class FastlyAcmeSource(BaseSource):
 
         self._ttl = default_ttl
         self._token = token
+        self._session = requests.Session()
 
     def _list_tls_subscriptions(self):
         url = "https://api.fastly.com/tls/subscriptions?include=tls_authorizations"
 
         while True:
-            resp = requests.get(
+            resp = self._session.get(
                 url,
                 headers={"Fastly-Key": self._token},
             )

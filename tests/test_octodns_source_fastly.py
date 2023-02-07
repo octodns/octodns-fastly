@@ -41,6 +41,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -66,6 +67,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "included": [],
             "meta": {"total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -88,6 +90,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "included": [],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -121,6 +124,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -167,6 +171,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -222,6 +227,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -271,6 +277,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -319,6 +326,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -396,6 +404,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             ],
             "meta": {"current_page": 2, "total_pages": 2},
         }
+        source._session = mock_requests
         mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response]
 
         source.populate(zone)
@@ -424,6 +433,7 @@ class FastlyAcmeSourceTestCase(TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.json.return_value = {"msg": "Provided credentials are missing or invalid"}
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         mock_response.raise_for_status.side_effect = HTTPError()

@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 octodns-fastly = {editable = true, path = "."}
-requests = "~=2.28"
 
 [dev-packages]
 pytest = "==7.2.1"

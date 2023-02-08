@@ -122,10 +122,10 @@ class FastlyAcmeSource(BaseSource):
                 zone.add_record(record)
             except SubzoneRecordException:
                 self.log.debug(
-                    "populate:   skipping subzone record=%s",
+                    "populate:   skipping subzone record %s",
                     record,
                 )
             except DuplicateRecordException:
-                self.log.warning("populate:   skipping duplicate ACME DNS challenge record for %s" % record.name)
+                self.log.warning("populate:   skipping duplicate ACME DNS challenge record %s" % record)
 
         self.log.info("populate:   found %s records", len(zone.records) - before)

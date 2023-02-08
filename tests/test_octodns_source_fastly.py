@@ -1,5 +1,5 @@
 from unittest import TestCase, skip
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from octodns.zone import Zone
 from requests.exceptions import HTTPError
@@ -39,8 +39,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -66,6 +67,7 @@ class FastlyAcmeSourceTestCase(TestCase):
             "included": [],
             "meta": {"total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -86,8 +88,9 @@ class FastlyAcmeSourceTestCase(TestCase):
         mock_response.json.return_value = {
             "data": [],
             "included": [],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -119,8 +122,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -165,8 +169,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -220,8 +225,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -269,8 +275,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -317,8 +324,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                     },
                 }
             ],
-            "meta": {"total_pages": 1},
+            "meta": {"current_page": 1, "total_pages": 1},
         }
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         source.populate(zone)
@@ -345,21 +353,192 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert "1234567890abcdef.fastly-validations.com." == record.value
         assert 3600 == record.ttl
 
-    # The TLS subscription list API endpoint is paginated. We only support a single page of results.
+    # The TLS subscription list API endpoint is paginated.
     @patch("octodns_fastly.requests")
-    def test_populate_errors_on_too_many_subscriptions(self, mock_requests):
+    def test_populate_supports_api_pagination(self, mock_requests):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"data": [], "included": [], "meta": {"total_pages": 2}}
-        mock_requests.get.return_value = mock_response
+        mock_page_one_response = MagicMock()
+        mock_page_one_response.status_code = 200
+        mock_page_one_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "1234567890abcdefghijkl",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 1, "total_pages": 3},
+        }
 
-        with self.assertRaises(NotImplementedError) as context:
-            source.populate(zone)
+        mock_page_two_response = MagicMock()
+        mock_page_two_response.status_code = 200
+        mock_page_two_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "lkjihgfedcba0987654321",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.www.example.com",
+                                "values": ["fedcba0987654321.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 2, "total_pages": 3},
+        }
 
-        assert "More than one page of TLS subscriptions is not supported" in str(context.exception)
+        mock_page_three_response = MagicMock()
+        mock_page_three_response.status_code = 200
+        mock_page_three_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "lkjihgfedcba1234567890",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.internal.example.com",
+                                "values": ["aaaaaaaaaaaaaaaa.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 3, "total_pages": 3},
+        }
+
+        source._session = mock_requests
+        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response, mock_page_three_response]
+
+        source.populate(zone)
+
+        records = {(r.name, r._type): r for r in zone.records}
+
+        assert len(zone.records) == 3
+
+        mock_requests.get.assert_has_calls(
+            [
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 1},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 2},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+                call(
+                    "https://api.fastly.com/tls/subscriptions",
+                    params={"include": "tls_authorizations", "page[number]": 3},
+                    headers={"Fastly-Key": "test_token"},
+                ),
+            ]
+        )
+
+        record = records[("_acme-challenge", "CNAME")]
+        assert "_acme-challenge" == record.name
+        assert "CNAME" == record._type
+        assert "1234567890abcdef.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+        record = records[("_acme-challenge.www", "CNAME")]
+        assert "_acme-challenge.www" == record.name
+        assert "CNAME" == record._type
+        assert "fedcba0987654321.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+        record = records[("_acme-challenge.internal", "CNAME")]
+        assert "_acme-challenge.internal" == record.name
+        assert "CNAME" == record._type
+        assert "aaaaaaaaaaaaaaaa.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
+
+    @patch("octodns_fastly.requests")
+    def test_populate_api_pagination_with_wildcard_and_root(self, mock_requests):
+        zone = Zone("example.com.", [])
+        source = FastlyAcmeSource("test_id", "test_token")
+
+        mock_page_one_response = MagicMock()
+        mock_page_one_response.status_code = 200
+        mock_page_one_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "1234567890abcdefghijkl",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 1, "total_pages": 2},
+        }
+
+        mock_page_two_response = MagicMock()
+        mock_page_two_response.status_code = 200
+        mock_page_two_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "lkjihgfedcba0987654321",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                }
+            ],
+            "meta": {"current_page": 2, "total_pages": 2},
+        }
+        source._session = mock_requests
+        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response]
+
+        source.populate(zone)
+
+        records = {(r.name, r._type): r for r in zone.records}
+
+        assert len(zone.records) == 1
+
+        record = records[("_acme-challenge", "CNAME")]
+        assert "_acme-challenge" == record.name
+        assert "CNAME" == record._type
+        assert "1234567890abcdef.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")
     def test_populate_errors_with_invalid_api_key(self, mock_requests):
@@ -369,6 +548,7 @@ class FastlyAcmeSourceTestCase(TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.json.return_value = {"msg": "Provided credentials are missing or invalid"}
+        source._session = mock_requests
         mock_requests.get.return_value = mock_response
 
         mock_response.raise_for_status.side_effect = HTTPError()

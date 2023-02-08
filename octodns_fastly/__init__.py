@@ -9,7 +9,7 @@ import logging
 import requests
 from octodns.record import Record
 from octodns.source.base import BaseSource
-from octodns.zone import SubzoneRecordException, Zone
+from octodns.zone import DuplicateRecordException, SubzoneRecordException, Zone
 
 
 class FastlyAcmeSource(BaseSource):
@@ -47,50 +47,55 @@ class FastlyAcmeSource(BaseSource):
 
         self._ttl = default_ttl
         self._token = token
+        self._session = requests.Session()
 
-    def _challenges(self, zone: Zone):
-        domain = zone.name.removesuffix(".")
+    def _list_tls_subscriptions(self):
+        page = 1
+        while True:
+            resp = self._session.get(
+                "https://api.fastly.com/tls/subscriptions",
+                params={"include": "tls_authorizations", "page[number]": page},
+                headers={"Fastly-Key": self._token},
+            )
+            resp.raise_for_status()  # Error on non-200 responses
 
-        resp = requests.get(
-            "https://api.fastly.com/tls/subscriptions?include=tls_authorizations",
-            headers={"Fastly-Key": self._token},
-        )
-        resp.raise_for_status()  # Error on non-200 responses
+            subscriptions = resp.json()
+            yield subscriptions
 
-        subscriptions = resp.json()
-
-        if subscriptions["meta"]["total_pages"] > 1:
-            raise NotImplementedError("More than one page of TLS subscriptions is not supported")
-
-        # Ensure we only have a list of authorizations
-        authorizations = [
-            authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
-        ]
-
-        self.log.debug("_challenges: recieved %d authorizations", len(authorizations))
-
-        # Use a set to deduplicate identical challenges
-        challenges = set()
-
-        for authorization in authorizations:
             self.log.debug(
-                "_challenges: recieved %d challenges for authorization %s",
-                len(authorization["attributes"]["challenges"]),
-                authorization["id"],
+                "_list_tls_subscriptions: received tls subscription page %d of %d",
+                subscriptions["meta"]["current_page"],
+                subscriptions["meta"]["total_pages"],
             )
 
-            for challenge in authorization["attributes"]["challenges"]:
-                if challenge["type"] == "managed-dns" and challenge["record_name"].endswith("." + domain):
-                    challenges.add(
-                        (
-                            challenge["record_name"].removesuffix("." + domain),
+            if subscriptions["meta"]["current_page"] == subscriptions["meta"]["total_pages"]:
+                break
+
+            page = subscriptions["meta"]["current_page"] + 1
+
+    def _challenges(self, zone: Zone):
+        for subscriptions in self._list_tls_subscriptions():
+            # Ensure we only have a list of authorizations
+            authorizations = [
+                authorization for authorization in subscriptions["included"] if authorization["type"] == "tls_authorization"
+            ]
+
+            self.log.debug("_challenges: received %d authorizations", len(authorizations))
+
+            for authorization in authorizations:
+                self.log.debug(
+                    "_challenges: received %d challenges for authorization %s",
+                    len(authorization["attributes"]["challenges"]),
+                    authorization["id"],
+                )
+
+                for challenge in authorization["attributes"]["challenges"]:
+                    suffix = "." + zone.name.removesuffix(".")
+                    if challenge["type"] == "managed-dns" and challenge["record_name"].endswith(suffix):
+                        yield (
+                            challenge["record_name"].removesuffix(suffix),
                             "%s." % challenge["values"][0],
                         )
-                    )
-
-        self.log.debug("_challenges: filtered to %d challenges", len(challenges))
-
-        return [{"name": name, "value": value} for name, value in challenges]
 
     def populate(self, zone: Zone, target=False, lenient=False):
         self.log.debug(
@@ -102,14 +107,14 @@ class FastlyAcmeSource(BaseSource):
 
         before = len(zone.records)
 
-        for challange in self._challenges(zone):
+        for name, value in self._challenges(zone):
             record = Record.new(
                 zone,
-                challange["name"],
+                name,
                 {
                     "type": "CNAME",
                     "ttl": self._ttl,
-                    "value": challange["value"],
+                    "value": value,
                 },
             )
 
@@ -117,8 +122,10 @@ class FastlyAcmeSource(BaseSource):
                 zone.add_record(record)
             except SubzoneRecordException:
                 self.log.debug(
-                    "populate: skipping subzone record=%s",
+                    "populate:   skipping subzone record=%s",
                     record,
                 )
+            except DuplicateRecordException:
+                self.log.warning("populate:   skipping duplicate ACME DNS challenge record for %s" % record.name)
 
         self.log.info("populate:   found %s records", len(zone.records) - before)

@@ -94,10 +94,9 @@ class FastlyAcmeSource(BaseSource):
             for challenge in authorization["attributes"]["challenges"]:
                 suffix = "." + zone.name.removesuffix(".")
                 if challenge["type"] == "managed-dns" and challenge["record_name"].endswith(suffix):
-                    yield (
-                        challenge["record_name"].removesuffix(suffix),
-                        "%s." % challenge["values"][0],
-                    )
+                    name = challenge["record_name"].removesuffix(suffix)
+                    value = f"{challenge['values'][0]}."  # Append a trailing dot
+                    yield (name, value)
 
     def populate(self, zone: Zone, target=False, lenient=False):
         self.log.debug(

@@ -10,7 +10,7 @@ from functools import cache
 import requests
 from octodns.record import Record
 from octodns.source.base import BaseSource
-from octodns.zone import DuplicateRecordException, SubzoneRecordException, Zone
+from octodns.zone import SubzoneRecordException, Zone
 
 
 class FastlyAcmeSource(BaseSource):
@@ -89,22 +89,27 @@ class FastlyAcmeSource(BaseSource):
 
             page = page["meta"]["current_page"] + 1
 
-    def _challenges(self, zone: Zone):
+    def _list_challenges(self):
         for authorization in self._list_tls_authorizations():
             for challenge in authorization["attributes"]["challenges"]:
-                suffix = "." + zone.name.removesuffix(".")
-                if challenge["type"] == "managed-dns" and challenge["record_name"].endswith(suffix):
-                    name = challenge["record_name"].removesuffix(suffix)
-                    value = f"{challenge['values'][0]}."  # Append a trailing dot
+                yield challenge
+
+    def _challenges(self, zone: Zone):
+        suffix = "." + zone.name.removesuffix(".")
+        # Filter out duplicate challenges included in the TLS subscriptions response
+        challenges = set()
+        for challenge in self._list_challenges():
+            if challenge["type"] == "managed-dns" and challenge["record_name"].endswith(suffix):
+                name = challenge["record_name"].removesuffix(suffix)
+                value = f"{challenge['values'][0]}."  # Append a trailing dot
+                if (name, value) not in challenges:
+                    challenges.add((name, value))
                     yield (name, value)
+                else:
+                    self.log.debug(f"_challenges: skipping duplicate challenge {name}.{zone.name}")
 
     def populate(self, zone: Zone, target=False, lenient=False):
-        self.log.debug(
-            "populate: name=%s, target=%s, lenient=%s",
-            zone.name,
-            target,
-            lenient,
-        )
+        self.log.debug(f"populate: name={zone.name}, target={target}, lenient={lenient}")
 
         before = len(zone.records)
 
@@ -117,16 +122,16 @@ class FastlyAcmeSource(BaseSource):
                     "ttl": self._ttl,
                     "value": value,
                 },
+                source=self,
+                lenient=lenient,
             )
 
             try:
-                zone.add_record(record)
+                zone.add_record(record, lenient=lenient)
             except SubzoneRecordException:
                 self.log.debug(
                     "populate:   skipping subzone record %s",
                     record,
                 )
-            except DuplicateRecordException:
-                self.log.warning("populate:   skipping duplicate ACME DNS challenge record %s" % record)
 
         self.log.info("populate:   found %s records", len(zone.records) - before)

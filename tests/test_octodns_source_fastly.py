@@ -79,7 +79,7 @@ class FastlyAcmeSourceTestCase(TestCase):
         )
 
     @patch("octodns_fastly.requests")
-    def test_populate_with_no_tls_subscriptions(self, mock_requests):
+    def test_populate_filters_non_tls_authorizations(self, mock_requests):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")
 
@@ -96,6 +96,51 @@ class FastlyAcmeSourceTestCase(TestCase):
         source.populate(zone)
 
         assert len(zone.records) == 0
+
+    @patch("octodns_fastly.requests")
+    def test_populate_with_no_tls_subscriptions(self, mock_requests):
+        zone = Zone("example.com.", [])
+        source = FastlyAcmeSource("test_id", "test_token")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [],
+            "included": [
+                {
+                    "id": "1234567890abcdefghijkl",
+                    "type": "tls_authorization",
+                    "attributes": {
+                        "challenges": [
+                            {
+                                "type": "managed-dns",
+                                "record_type": "CNAME",
+                                "record_name": "_acme-challenge.www.example.com",
+                                "values": ["1234567890abcdef.fastly-validations.com"],
+                            }
+                        ]
+                    },
+                },
+                {
+                    "id": "1111111111111111111111",
+                    "type": "tls_other",
+                },
+            ],
+            "meta": {"current_page": 1, "total_pages": 1},
+        }
+        source._session = mock_requests
+        mock_requests.get.return_value = mock_response
+
+        source.populate(zone)
+
+        records = {(r.name, r._type): r for r in zone.records}
+        record = records[("_acme-challenge.www", "CNAME")]
+
+        assert len(zone.records) == 1
+        assert "_acme-challenge.www" == record.name
+        assert "CNAME" == record._type
+        assert "1234567890abcdef.fastly-validations.com." == record.value
+        assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")
     def test_populate_with_single_tls_challenge(self, mock_requests):

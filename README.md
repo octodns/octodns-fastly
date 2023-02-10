@@ -9,16 +9,15 @@ An [OctoDNS source](https://github.com/octodns/octodns#dynamic-sources) for [Fas
 OctoDNS configuration:
 
 ```yml
-fastly:
-  class: octodns_fastly.FastlyAcmeSource
-  token: env/FASTLY_API_TOKEN
+providers:
+  fastly:
+    class: octodns_fastly.FastlyAcmeSource
+    token: env/FASTLY_API_TOKEN
 
 zones:
   example.com.:
     sources:
       - fastly
-    targets:
-      - route53
 ```
 
 ## Install

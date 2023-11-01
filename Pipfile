@@ -9,7 +9,7 @@ octodns-fastly = {editable = true, path = "."}
 [dev-packages]
 pytest = "==7.2.1"
 black = "==23.1.0"
-pylint = "==2.16.0"
+pylint = "==3.0.2"
 isort = "==5.12.0"
 flake8 = "==6.0.0"
 

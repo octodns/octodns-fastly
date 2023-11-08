@@ -1,8 +1,9 @@
 from unittest import TestCase, skip
 from unittest.mock import MagicMock, call, patch
 
-from octodns.zone import Zone
 from requests.exceptions import HTTPError
+
+from octodns.zone import Zone
 
 from octodns_fastly import FastlyAcmeSource
 
@@ -33,7 +34,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.net",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -116,15 +119,14 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
                 },
-                {
-                    "id": "1111111111111111111111",
-                    "type": "tls_other",
-                },
+                {"id": "1111111111111111111111", "type": "tls_other"},
             ],
             "meta": {"current_page": 1, "total_pages": 1},
         }
@@ -161,7 +163,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -202,13 +206,17 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                             {
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.example.com",
-                                "values": ["fedcba0987654321.fastly-validations.com"],
+                                "values": [
+                                    "fedcba0987654321.fastly-validations.com"
+                                ],
                             },
                         ]
                     },
@@ -240,7 +248,9 @@ class FastlyAcmeSourceTestCase(TestCase):
     # TLS subscriptions can contain a mix of domains, so we need to filter out any
     # that don't match the zone we're populating.
     @patch("octodns_fastly.requests")
-    def test_populate_with_mixed_domains_in_tls_subscription(self, mock_requests):
+    def test_populate_with_mixed_domains_in_tls_subscription(
+        self, mock_requests
+    ):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")
 
@@ -258,13 +268,17 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                             {
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.net",
-                                "values": ["fedcba0987654321.fastly-validations.com"],
+                                "values": [
+                                    "fedcba0987654321.fastly-validations.com"
+                                ],
                             },
                         ]
                     },
@@ -290,7 +304,9 @@ class FastlyAcmeSourceTestCase(TestCase):
     # When a TLS subscription contains a wildcard and root domain (e.g. example.com and *.example.com)
     # the challenge record is listed twice in the API response with the same record_name and values.
     @patch("octodns_fastly.requests")
-    def test_populate_dedups_wildcard_and_root_domain_challenges(self, mock_requests):
+    def test_populate_dedups_wildcard_and_root_domain_challenges(
+        self, mock_requests
+    ):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")
 
@@ -308,13 +324,17 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                             {
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                         ]
                     },
@@ -357,13 +377,17 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                             {
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.internal.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             },
                         ]
                     },
@@ -418,7 +442,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -441,7 +467,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.www.example.com",
-                                "values": ["fedcba0987654321.fastly-validations.com"],
+                                "values": [
+                                    "fedcba0987654321.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -464,7 +492,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.internal.example.com",
-                                "values": ["aaaaaaaaaaaaaaaa.fastly-validations.com"],
+                                "values": [
+                                    "aaaaaaaaaaaaaaaa.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -474,7 +504,11 @@ class FastlyAcmeSourceTestCase(TestCase):
         }
 
         source._session = mock_requests
-        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response, mock_page_three_response]
+        mock_requests.get.side_effect = [
+            mock_page_one_response,
+            mock_page_two_response,
+            mock_page_three_response,
+        ]
 
         source.populate(zone)
 
@@ -521,7 +555,9 @@ class FastlyAcmeSourceTestCase(TestCase):
         assert 3600 == record.ttl
 
     @patch("octodns_fastly.requests")
-    def test_populate_api_pagination_with_wildcard_and_root(self, mock_requests):
+    def test_populate_api_pagination_with_wildcard_and_root(
+        self, mock_requests
+    ):
         zone = Zone("example.com.", [])
         source = FastlyAcmeSource("test_id", "test_token")
 
@@ -539,7 +575,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -562,7 +600,9 @@ class FastlyAcmeSourceTestCase(TestCase):
                                 "type": "managed-dns",
                                 "record_type": "CNAME",
                                 "record_name": "_acme-challenge.example.com",
-                                "values": ["1234567890abcdef.fastly-validations.com"],
+                                "values": [
+                                    "1234567890abcdef.fastly-validations.com"
+                                ],
                             }
                         ]
                     },
@@ -571,7 +611,10 @@ class FastlyAcmeSourceTestCase(TestCase):
             "meta": {"current_page": 2, "total_pages": 2},
         }
         source._session = mock_requests
-        mock_requests.get.side_effect = [mock_page_one_response, mock_page_two_response]
+        mock_requests.get.side_effect = [
+            mock_page_one_response,
+            mock_page_two_response,
+        ]
 
         source.populate(zone)
 
@@ -592,7 +635,9 @@ class FastlyAcmeSourceTestCase(TestCase):
 
         mock_response = MagicMock()
         mock_response.status_code = 401
-        mock_response.json.return_value = {"msg": "Provided credentials are missing or invalid"}
+        mock_response.json.return_value = {
+            "msg": "Provided credentials are missing or invalid"
+        }
         source._session = mock_requests
         mock_requests.get.return_value = mock_response
 

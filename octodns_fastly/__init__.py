@@ -119,14 +119,14 @@ class FastlyAcmeSource(BaseSource):
         When certificates are requested for the root of a domain and it's wildcard (`*.example.com`),
         Fastly returns two challenges with the same record name and value which need to be deduplicated.
         """
-        suffix = "." + zone.name.removesuffix(".")
+        suffix = "." + zone.name[:-1]
         # Filter out duplicate challenges included in the TLS subscriptions response
         challenges = set()
         for challenge in self._list_challenges():
             if challenge["type"] == "managed-dns" and challenge[
                 "record_name"
             ].endswith(suffix):
-                name = challenge["record_name"].removesuffix(suffix)
+                name = challenge["record_name"][: -len(suffix)]
                 value = f"{challenge['values'][0]}."  # Append a trailing dot
                 if (name, value) not in challenges:
                     challenges.add((name, value))

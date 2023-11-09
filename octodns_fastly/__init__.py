@@ -1,5 +1,5 @@
 import logging
-from functools import cache
+from functools import lru_cache
 
 import requests
 
@@ -52,7 +52,7 @@ class FastlyAcmeSource(BaseSource):
         self._token = token
         self._session = requests.Session()
 
-    @cache
+    @lru_cache(maxsize=None)
     def _list_tls_authorizations(self):
         """
         Fetch TLS subscriptions and return a list of TLS authorizations.

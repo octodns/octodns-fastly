@@ -1,7 +1,8 @@
-from os import environ
-from subprocess import CalledProcessError, check_output
+#!/usr/bin/env python
 
 from setuptools import find_packages, setup
+
+import octodns_fastly
 
 
 def descriptions():
@@ -9,26 +10,6 @@ def descriptions():
         ret = fh.read()
         first = ret.split('\n', 1)[0].replace('#', '')
         return first, ret
-
-
-def version():
-    version = 'unknown'
-    with open('octodns_fastly/__init__.py') as fh:
-        for line in fh:
-            if line.startswith('__VERSION__'):
-                version = line.split("'")[1]
-                break
-
-    # pep440 style public & local version numbers
-    if environ.get('OCTODNS_RELEASE', False):
-        # public
-        return version
-    try:
-        sha = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8')[:8]
-    except (CalledProcessError, FileNotFoundError):
-        sha = 'unknown'
-    # local
-    return f'{version}+{sha}'
 
 
 description, long_description = descriptions()
@@ -60,5 +41,5 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     url='https://github.com/octodns/octodns-fastly',
-    version=version(),
+    version=octodns_fastly.__version,
 )

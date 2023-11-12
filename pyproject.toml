@@ -1,18 +1,14 @@
-[build-system]
-requires = [
-  "setuptools~=67.1",
-  "setuptools-scm"
-]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "octodns-fastly"
-requires-python = "~=3.10"
-dependencies = [
-  "octodns~=1.0.0",
-  "requests~=2.28",
-]
-dynamic = ["version"]
-
 [tool.black]
-line-length=127 # The GitHub editor is 127 chars wide
+line-length=80
+skip-string-normalization=true
+skip-magic-trailing-comma=true
+
+[tool.isort]
+profile = "black"
+known_first_party="octodns_fastly"
+known_octodns="octodns"
+line_length=80
+sections="FUTURE,STDLIB,THIRDPARTY,OCTODNS,FIRSTPARTY,LOCALFOLDER"
+
+[tool.pytest.ini_options]
+pythonpath = "."

@@ -1,10 +1,13 @@
 import logging
-from functools import cache
+from functools import lru_cache
 
 import requests
+
 from octodns.record import Record
 from octodns.source.base import BaseSource
 from octodns.zone import SubzoneRecordException, Zone
+
+__version__ = __VERSION__ = '0.0.1'
 
 
 class FastlyAcmeSource(BaseSource):
@@ -49,7 +52,7 @@ class FastlyAcmeSource(BaseSource):
         self._token = token
         self._session = requests.Session()
 
-    @cache
+    @lru_cache(maxsize=None)
     def _list_tls_authorizations(self):
         """
         Fetch TLS subscriptions and return a list of TLS authorizations.
@@ -79,7 +82,11 @@ class FastlyAcmeSource(BaseSource):
 
             authorizations.extend(
                 # Ensure we only have a list of authorizations
-                [authorization for authorization in page["included"] if authorization["type"] == "tls_authorization"]
+                [
+                    authorization
+                    for authorization in page["included"]
+                    if authorization["type"] == "tls_authorization"
+                ]
             )
 
             self.log.debug(
@@ -89,7 +96,10 @@ class FastlyAcmeSource(BaseSource):
             )
 
             if page["meta"]["current_page"] == page["meta"]["total_pages"]:
-                self.log.debug("_list_tls_authorizations: found %d authorizations total", len(authorizations))
+                self.log.debug(
+                    "_list_tls_authorizations: found %d authorizations total",
+                    len(authorizations),
+                )
                 return authorizations
 
             page = page["meta"]["current_page"] + 1
@@ -109,21 +119,27 @@ class FastlyAcmeSource(BaseSource):
         When certificates are requested for the root of a domain and it's wildcard (`*.example.com`),
         Fastly returns two challenges with the same record name and value which need to be deduplicated.
         """
-        suffix = "." + zone.name.removesuffix(".")
+        suffix = "." + zone.name[:-1]
         # Filter out duplicate challenges included in the TLS subscriptions response
         challenges = set()
         for challenge in self._list_challenges():
-            if challenge["type"] == "managed-dns" and challenge["record_name"].endswith(suffix):
-                name = challenge["record_name"].removesuffix(suffix)
+            if challenge["type"] == "managed-dns" and challenge[
+                "record_name"
+            ].endswith(suffix):
+                name = challenge["record_name"][: -len(suffix)]
                 value = f"{challenge['values'][0]}."  # Append a trailing dot
                 if (name, value) not in challenges:
                     challenges.add((name, value))
                     yield (name, value)
                 else:
-                    self.log.debug(f"_challenges: skipping duplicate challenge {name}.{zone.name}")
+                    self.log.debug(
+                        f"_challenges: skipping duplicate challenge {name}.{zone.name}"
+                    )
 
     def populate(self, zone: Zone, target=False, lenient=False):
-        self.log.debug(f"populate: name={zone.name}, target={target}, lenient={lenient}")
+        self.log.debug(
+            f"populate: name={zone.name}, target={target}, lenient={lenient}"
+        )
 
         before = len(zone.records)
 
@@ -131,11 +147,7 @@ class FastlyAcmeSource(BaseSource):
             record = Record.new(
                 zone,
                 name,
-                {
-                    "type": "CNAME",
-                    "ttl": self._ttl,
-                    "value": value,
-                },
+                {"type": "CNAME", "ttl": self._ttl, "value": value},
                 source=self,
                 lenient=lenient,
             )
@@ -143,9 +155,8 @@ class FastlyAcmeSource(BaseSource):
             try:
                 zone.add_record(record, lenient=lenient)
             except SubzoneRecordException:
-                self.log.debug(
-                    "populate:   skipping subzone record %s",
-                    record,
-                )
+                self.log.debug("populate:   skipping subzone record %s", record)
 
-        self.log.info("populate:   found %s records", len(zone.records) - before)
+        self.log.info(
+            "populate:   found %s records", len(zone.records) - before
+        )

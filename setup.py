@@ -2,7 +2,13 @@
 
 from setuptools import find_packages, setup
 
-import octodns_fastly
+
+def version():
+    with open('octodns_fastly/__init__.py') as fh:
+        for line in fh:
+            if line.startswith('__version__'):
+                return line.split("'")[1]
+    raise Exception('failed to determine version number')
 
 
 def descriptions():
@@ -41,5 +47,5 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     url='https://github.com/octodns/octodns-fastly',
-    version=octodns_fastly.__version,
+    version=version(),
 )

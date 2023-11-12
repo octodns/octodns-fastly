@@ -23,8 +23,8 @@ description, long_description = descriptions()
 tests_require = ('pytest', 'pytest-cov', 'pytest-network')
 
 setup(
-    author='xxx',
-    author_email='yyy',
+    author='Ross McFarland',
+    author_email='rwmcfa1@gmail.com',
     description=description,
     extras_require={
         'dev': tests_require

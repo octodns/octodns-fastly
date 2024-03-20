@@ -29,7 +29,11 @@ setup(
     extras_require={
         'dev': tests_require
         + (
-            'black>=23.1.0,<24.0.0',
+            # we need to manually/explicitely bump major versions as they're
+            # likely to result in formatting changes that should happen in their
+            # own PR. This will basically happen yearly
+            # https://black.readthedocs.io/en/stable/the_black_code_style/index.html#stability-policy
+            'black>=24.3.0,<25.0.0',
             'build>=0.7.0',
             'isort>=5.11.5',
             'pyflakes>=2.2.0',

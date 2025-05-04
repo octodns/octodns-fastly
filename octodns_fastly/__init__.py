@@ -7,7 +7,7 @@ from octodns.record import Record
 from octodns.source.base import BaseSource
 from octodns.zone import SubzoneRecordException, Zone
 
-__version__ = __VERSION__ = '0.0.1'
+__version__ = __VERSION__ = '1.0.0'
 
 
 class FastlyAcmeSource(BaseSource):

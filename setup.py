@@ -3,19 +3,19 @@
 from setuptools import find_packages, setup
 
 
-def version():
-    with open('octodns_fastly/__init__.py') as fh:
-        for line in fh:
-            if line.startswith('__version__'):
-                return line.split("'")[1]
-    raise Exception('failed to determine version number')
-
-
 def descriptions():
     with open('README.md') as fh:
         ret = fh.read()
         first = ret.split('\n', 1)[0].replace('#', '')
         return first, ret
+
+
+def version():
+    with open('octodns_fastly/__init__.py') as fh:
+        for line in fh:
+            if line.startswith('__version__'):
+                return line.split("'")[1]
+    return 'unknown'
 
 
 description, long_description = descriptions()
